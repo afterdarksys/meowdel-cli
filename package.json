@@ -1,0 +1,43 @@
+{
+  "name": "meowdel",
+  "version": "1.0.0",
+  "description": "Meowdel CLI — Chat, Brain, and AI agents from your terminal",
+  "main": "dist/index.js",
+  "bin": {
+    "meowdel": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["ai", "chat", "cli", "meowdel", "brain", "knowledge", "obsidian"],
+  "author": "After Dark Systems <dev@afterdarktech.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/afterdarksystems/meowdel-cli.git"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "axios": "^1.6.2",
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "dotenv": "^16.3.1",
+    "inquirer": "^8.2.5",
+    "open": "^8.4.2",
+    "ora": "^5.4.1",
+    "marked": "^9.1.6",
+    "marked-terminal": "^6.2.0"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.7",
+    "@types/node": "^20.10.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
