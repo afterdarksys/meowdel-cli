@@ -126,6 +126,41 @@ program
     console.log()
   })
 
+// ── superclaude ───────────────────────────────────────────────────────────────
+program
+  .command('superclaude <subcommand>')
+  .description('AI-powered git & code tools (commit, changelog, readme, review, docs, brainstorm, annotate, verify)')
+  .option('-c, --context <text>', 'Additional context for commit message')
+  .option('--period <period>', 'Changelog period: daily, weekly, monthly')
+  .option('--since <date>', 'Changelog since date (e.g. "2 weeks ago")')
+  .option('-f, --file <path>', 'File to review')
+  .option('--hash <hash>', 'Commit hash to annotate')
+  .option('--count <n>', 'Number of commits to annotate', '5')
+  .addHelpText('after', `
+Subcommands:
+  commit       Generate a conventional commit message from staged changes
+  changelog    Generate a changelog (--period daily|weekly|monthly)
+  readme       Generate a README.md for the project
+  review       Review recent code changes for issues
+  docs         Generate technical documentation
+  brainstorm   Suggest features and improvements
+  annotate     Add AI annotations to git history (--hash or --count)
+  verify       Check that all dependencies and API keys are configured
+
+Examples:
+  meowdel superclaude commit
+  meowdel superclaude commit --context "part of auth refactor"
+  meowdel superclaude changelog --period weekly
+  meowdel superclaude changelog --since "2 weeks ago"
+  meowdel superclaude review --file src/auth.ts
+  meowdel superclaude annotate --count 10
+  meowdel superclaude verify
+  `)
+  .action(async (subcommand, options) => {
+    const { superclaudeCommand } = await import('./commands/superclaude')
+    await superclaudeCommand(subcommand, options)
+  })
+
 program.parse(process.argv)
 
 if (!process.argv.slice(2).length) {
