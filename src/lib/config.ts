@@ -9,7 +9,9 @@ export interface MeowdelConfig {
   apiKey?: string
   baseUrl: string
   personality: string
-  claudeApiKey?: string  // For direct Claude integration
+  defaultPet?: string    // v2 alias — used by chat, ask, console, alarms
+  claudeApiKey?: string  // For direct Anthropic Claude integration
+  openAiKey?: string     // For direct OpenAI/Codex integration
 }
 
 const DEFAULTS: MeowdelConfig = {

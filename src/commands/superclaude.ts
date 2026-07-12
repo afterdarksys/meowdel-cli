@@ -2,6 +2,7 @@ import chalk from 'chalk'
 import ora from 'ora'
 import { execSync } from 'child_process'
 import { loadConfig } from '../lib/config'
+import { callAI } from '../lib/api'
 
 // ── Git helpers ───────────────────────────────────────────────────────────────
 
@@ -21,35 +22,6 @@ function requireGitRepo() {
   }
 }
 
-// ── Claude helper ─────────────────────────────────────────────────────────────
-
-async function callClaude(prompt: string): Promise<string> {
-  const config = loadConfig()
-
-  if (config.claudeApiKey) {
-    const Anthropic = (await import('@anthropic-ai/sdk')).default
-    const client = new Anthropic({ apiKey: config.claudeApiKey })
-    const res = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    })
-    return res.content[0].type === 'text' ? res.content[0].text : ''
-  }
-
-  if (config.apiKey) {
-    const axios = (await import('axios')).default
-    const res = await axios.post(
-      `${config.baseUrl}/api/v1/chat`,
-      { message: prompt, personality: config.personality, useBrainContext: false, conversationHistory: [] },
-      { headers: { Authorization: `Bearer ${config.apiKey}` }, timeout: 60000 }
-    )
-    return res.data?.message ?? ''
-  }
-
-  console.error(chalk.red('No API key configured. Run: meowdel config'))
-  process.exit(1)
-}
 
 // ── Subcommand handlers ───────────────────────────────────────────────────────
 
@@ -85,7 +57,7 @@ Requirements:
 
   const spinner = ora(chalk.gray('Generating commit message...')).start()
   try {
-    const result = await callClaude(prompt)
+    const result = await callAI(prompt)
     spinner.stop()
     console.log(chalk.cyan('\nSuggested commit message:\n'))
     console.log(result)
@@ -153,7 +125,7 @@ ${requirements}`
 
   const spinner = ora(chalk.gray('Generating changelog...')).start()
   try {
-    const result = await callClaude(prompt)
+    const result = await callAI(prompt)
     spinner.stop()
     console.log(chalk.cyan('\nChangelog:\n'))
     console.log(result)
@@ -197,7 +169,7 @@ Requirements:
 
   const spinner = ora(chalk.gray('Generating README...')).start()
   try {
-    const result = await callClaude(prompt)
+    const result = await callAI(prompt)
     spinner.stop()
     console.log(chalk.cyan('\nGenerated README:\n'))
     console.log(result)
@@ -239,7 +211,7 @@ Be specific — reference actual line numbers or code snippets.`
 
   const spinner = ora(chalk.gray('Reviewing code...')).start()
   try {
-    const result = await callClaude(prompt)
+    const result = await callAI(prompt)
     spinner.stop()
     console.log(chalk.cyan('\nCode Review:\n'))
     console.log(result)
@@ -276,7 +248,7 @@ Output clean, well-structured markdown.`
 
   const spinner = ora(chalk.gray('Generating docs...')).start()
   try {
-    const result = await callClaude(prompt)
+    const result = await callAI(prompt)
     spinner.stop()
     console.log(chalk.cyan('\nTechnical Documentation:\n'))
     console.log(result)
@@ -319,7 +291,7 @@ Be specific and actionable. Prioritize by impact.`
 
   const spinner = ora(chalk.gray('Brainstorming ideas...')).start()
   try {
-    const result = await callClaude(prompt)
+    const result = await callAI(prompt)
     spinner.stop()
     console.log(chalk.cyan('\nIdeas & Suggestions:\n'))
     console.log(result)
@@ -365,7 +337,7 @@ Be detailed but concise. Output only the annotation content.`
 
     const spinner = ora(chalk.gray(`Annotating ${hash.slice(0, 7)}...`)).start()
     try {
-      const result = await callClaude(prompt)
+      const result = await callAI(prompt)
       spinner.stop()
       console.log(chalk.cyan(`\n── ${hash.slice(0, 7)}: ${message} ──\n`))
       console.log(result)
@@ -400,6 +372,8 @@ async function cmdVerify() {
   const config = loadConfig()
   if (config.claudeApiKey) {
     console.log(chalk.green('  ✓ Claude API key'), chalk.gray('configured'))
+  } else if (config.openAiKey) {
+    console.log(chalk.green('  ✓ OpenAI API key'), chalk.gray('configured'))
   } else if (config.apiKey) {
     console.log(chalk.green('  ✓ Meowdel API key'), chalk.gray('configured'))
   } else {

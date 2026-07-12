@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
- * Meowdel CLI
- * Chat with AI, manage your Brain knowledge base, and run AI agents from your terminal.
+ * Meowdel CLI v2
+ * Chat, notes, alarms, and AI agents from your terminal.
  *
  * Install: npm install -g meowdel
  * Setup:   meowdel config
  * Chat:    meowdel chat
- * Brain:   meowdel brain list
+ * Notes:   meowdel notes list
+ * Alarms:  meowdel alarms list
  */
 
 import { Command } from 'commander'
@@ -19,17 +20,19 @@ const program = new Command()
 
 program
   .name('meowdel')
-  .description(chalk.magenta('🐱 Meowdel — AI knowledge, chat, and agents from your terminal'))
-  .version('1.0.0')
+  .description(chalk.magenta('🐱 Meowdel — AI knowledge, chat, alarms, and agents from your terminal'))
+  .version('2.0.0')
 
 // ── config ────────────────────────────────────────────────────────────────────
 program
   .command('config')
-  .description('Configure Meowdel CLI (API keys, personality, URL)')
+  .description('Configure Meowdel CLI (API keys, default pet, URL)')
   .option('-k, --key <key>', 'Set meowdel.ai API key')
-  .option('-c, --claude <key>', 'Set your Claude API key for direct AI access')
+  .option('-c, --claude <key>', 'Set your Claude (Anthropic) API key for direct AI access')
+  .option('-o, --openai <key>', 'Set your OpenAI API key for Codex/ChatGPT direct access')
   .option('-u, --url <url>', 'Set meowdel.ai base URL')
-  .option('-p, --personality <name>', 'Set default personality')
+  .option('-p, --pet <name>', 'Set default pet personality')
+  .option('--personality <name>', 'Alias for --pet')
   .option('-s, --show', 'Show current config')
   .action(async (options) => {
     const { configCommand } = await import('./commands/config')
@@ -40,29 +43,103 @@ program
 program
   .command('chat')
   .description('Start an interactive chat session with Meowdel')
-  .option('-p, --personality <name>', 'Choose personality (mittens, luna, bandit...)')
-  .option('-b, --brain', 'Enable Brain context', false)
+  .option('-p, --pet <name>', 'Choose pet personality (meowdel, bandit, luna…)')
+  .option('--personality <name>', 'Alias for --pet')
+  .option('-b, --brain', 'Enable Brain context (legacy flag)', false)
   .action(async (options) => {
     const { chatCommand } = await import('./commands/chat')
     await chatCommand(options)
+  })
+
+// ── console ───────────────────────────────────────────────────────────────────
+program
+  .command('console')
+  .description('Full-screen TUI chat')
+  .option('-p, --pet <name>', 'Choose pet personality', 'meowdel')
+  .action(async (options) => {
+    const { consoleCommand } = await import('./commands/console')
+    await consoleCommand(options)
   })
 
 // ── ask ───────────────────────────────────────────────────────────────────────
 program
   .command('ask <question>')
   .description('Ask a one-off question')
-  .option('-p, --personality <name>', 'Choose personality')
-  .option('-b, --brain', 'Enable Brain context', false)
+  .option('-p, --pet <name>', 'Choose pet personality')
+  .option('--personality <name>', 'Alias for --pet')
+  .option('-b, --brain', 'Enable Brain context (legacy flag)', false)
   .option('-j, --json', 'Output as JSON', false)
   .action(async (question, options) => {
     const { askCommand } = await import('./commands/ask')
     await askCommand(question, options)
   })
 
-// ── brain ─────────────────────────────────────────────────────────────────────
+// ── notes ─────────────────────────────────────────────────────────────────────
+const notes = program.command('notes').description('Brain knowledge management')
+
+notes
+  .command('list')
+  .description('List all notes')
+  .option('-t, --tag <tag>', 'Filter by tag')
+  .option('-s, --search <query>', 'Filter by title/summary/tag')
+  .action(async (opts) => {
+    const { notesListCommand } = await import('./commands/notes')
+    await notesListCommand(opts)
+  })
+
+notes
+  .command('view <slug>')
+  .description('View a note')
+  .action(async (slug) => {
+    const { notesViewCommand } = await import('./commands/notes')
+    await notesViewCommand(slug)
+  })
+
+notes
+  .command('new [title]')
+  .description('Create a note (opens $EDITOR)')
+  .action(async (title) => {
+    const { notesNewCommand } = await import('./commands/notes')
+    await notesNewCommand(title)
+  })
+
+notes
+  .command('edit <slug>')
+  .description('Edit a note in $EDITOR')
+  .action(async (slug) => {
+    const { notesEditCommand } = await import('./commands/notes')
+    await notesEditCommand(slug)
+  })
+
+notes
+  .command('delete <slug>')
+  .alias('rm')
+  .description('Delete a note')
+  .action(async (slug) => {
+    const { notesDeleteCommand } = await import('./commands/notes')
+    await notesDeleteCommand(slug)
+  })
+
+notes
+  .command('search <query>')
+  .description('Semantic search')
+  .action(async (query) => {
+    const { notesSearchCommand } = await import('./commands/notes')
+    await notesSearchCommand(query)
+  })
+
+notes
+  .command('tags')
+  .description('List all tags with counts')
+  .action(async () => {
+    const { notesTagsCommand } = await import('./commands/notes')
+    await notesTagsCommand()
+  })
+
+// ── brain (legacy — kept for backward compat) ─────────────────────────────────
 program
   .command('brain <action> [query]')
-  .description('Brain knowledge base operations')
+  .description('Brain knowledge base operations (legacy — prefer: meowdel notes)')
   .option('-t, --title <title>', 'Note title (for new)')
   .option('-f, --file <path>', 'Import from file (for new)')
   .option('--tag <tag>', 'Tag (for new)')
@@ -74,24 +151,104 @@ Actions:
   new           Create a new note
   get           Get note content
   graph         Show knowledge graph stats
-  agent         Queue an AI agent job (summarize, embed, auto-link)
+  agent         Queue an AI agent job
 
 Examples:
   meowdel brain list
   meowdel brain search "machine learning"
   meowdel brain new --title "My Note" --file ./notes/foo.md
   meowdel brain get --slug my-note
-  meowdel brain agent --slug my-note
   `)
   .action(async (action, query, options) => {
     const { brainCommand } = await import('./commands/brain')
     await brainCommand({ action, query, ...options })
   })
 
+// ── alarms ────────────────────────────────────────────────────────────────────
+const alarms = program.command('alarms').description('Alarm clock management (max 5)')
+
+alarms
+  .command('list')
+  .description('List alarms')
+  .action(async () => {
+    const { alarmsListCommand } = await import('./commands/alarms')
+    await alarmsListCommand()
+  })
+
+alarms
+  .command('add')
+  .description('Create a new alarm (interactive)')
+  .action(async () => {
+    const { alarmsAddCommand } = await import('./commands/alarms')
+    await alarmsAddCommand()
+  })
+
+alarms
+  .command('edit <id>')
+  .description('Edit an alarm')
+  .action(async (id) => {
+    const { alarmsEditCommand } = await import('./commands/alarms')
+    await alarmsEditCommand(id)
+  })
+
+alarms
+  .command('toggle <id>')
+  .description('Enable/disable an alarm')
+  .action(async (id) => {
+    const { alarmsToggleCommand } = await import('./commands/alarms')
+    await alarmsToggleCommand(id)
+  })
+
+alarms
+  .command('delete <id>')
+  .alias('rm')
+  .description('Delete an alarm')
+  .action(async (id) => {
+    const { alarmsDeleteCommand } = await import('./commands/alarms')
+    await alarmsDeleteCommand(id)
+  })
+
+alarms
+  .command('check')
+  .description('Check for alarms due now')
+  .action(async () => {
+    const { alarmsCheckCommand } = await import('./commands/alarms')
+    await alarmsCheckCommand()
+  })
+
+// ── pets / personalities ──────────────────────────────────────────────────────
+program
+  .command('pets')
+  .alias('personalities')
+  .description('List available AI cat personalities (fetches live from API)')
+  .action(async () => {
+    const { listPersonalities } = await import('./commands/personalities')
+    await listPersonalities()
+  })
+
+// ── claude ────────────────────────────────────────────────────────────────────
+const claude = program.command('claude').description('Claude Code integration')
+
+claude
+  .command('setup')
+  .description('Register Meowdel as a Claude MCP server (the only cat that understands software design)')
+  .action(async () => {
+    const { claudeSetupCommand } = await import('./commands/claude')
+    await claudeSetupCommand()
+  })
+
+claude
+  .command('status')
+  .description('Check if Meowdel MCP server is configured')
+  .action(async () => {
+    const { claudeStatusCommand } = await import('./commands/claude')
+    await claudeStatusCommand()
+  })
+
 // ── login ─────────────────────────────────────────────────────────────────────
 program
   .command('login')
-  .description('Login to meowdel.ai and save your API key')
+  .description('Open meowdel.ai in your browser to get an API key')
   .action(async () => {
     const open = (await import('open')).default
     const { loadConfig } = await import('./lib/config')
@@ -100,30 +257,6 @@ program
     console.log(chalk.gray('After logging in, go to Profile → API Keys and run:'))
     console.log(chalk.cyan('  meowdel config --key YOUR_API_KEY\n'))
     await open(`${config.baseUrl}/profile`)
-  })
-
-// ── personalities ─────────────────────────────────────────────────────────────
-program
-  .command('personalities')
-  .description('List available AI cat personalities')
-  .action(() => {
-    console.log(chalk.magenta('\n🐱 Meowdel Personalities\n'))
-    const personalities = [
-      { id: 'mittens', desc: 'Friendly, helpful, warm — the default' },
-      { id: 'luna', desc: 'Mystical, poetic, dreamy' },
-      { id: 'bandit', desc: 'Bold, quick, street-smart (the Brain expert)' },
-      { id: 'bella', desc: 'Elegant, precise, detail-oriented' },
-      { id: 'blubie', desc: 'Playful, curious, enthusiastic' },
-      { id: 'professor', desc: 'Academic, thorough, loves footnotes' },
-      { id: 'ninja', desc: 'Concise, fast, no fluff' },
-      { id: 'kiki', desc: 'Creative, quirky, outside-the-box' },
-    ]
-    personalities.forEach(p => {
-      console.log(chalk.cyan(`  ${p.id.padEnd(12)}`), chalk.gray(p.desc))
-    })
-    console.log()
-    console.log(chalk.gray('Usage: meowdel chat -p bandit'))
-    console.log()
   })
 
 // ── superclaude ───────────────────────────────────────────────────────────────

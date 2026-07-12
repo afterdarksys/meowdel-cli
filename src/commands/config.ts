@@ -1,23 +1,28 @@
 import chalk from 'chalk'
 import inquirer from 'inquirer'
 import { loadConfig, saveConfig, getConfigPath } from '../lib/config'
+import { KNOWN_PETS } from '../lib/api'
 
 export async function configCommand(options: {
   key?: string
   url?: string
+  pet?: string
   personality?: string
   claude?: string
+  openai?: string
   show?: boolean
 }) {
   const config = loadConfig()
 
   if (options.show) {
+    const pet = config.defaultPet || config.personality
     console.log(chalk.magenta('\n🐱 Meowdel Configuration\n'))
     console.log(chalk.gray(`Config file: ${getConfigPath()}`))
     console.log(chalk.cyan('API Key:     ') + (config.apiKey ? chalk.green('✓ configured') : chalk.red('not set')))
     console.log(chalk.cyan('Claude Key:  ') + (config.claudeApiKey ? chalk.green('✓ configured') : chalk.gray('not set (optional)')))
+    console.log(chalk.cyan('OpenAI Key:  ') + (config.openAiKey ? chalk.green('✓ configured') : chalk.gray('not set (optional)')))
     console.log(chalk.cyan('Base URL:    ') + config.baseUrl)
-    console.log(chalk.cyan('Personality: ') + config.personality)
+    console.log(chalk.cyan('Default pet: ') + pet)
     console.log()
     return
   }
@@ -34,15 +39,22 @@ export async function configCommand(options: {
     return
   }
 
-  if (options.personality) {
-    saveConfig({ personality: options.personality })
-    console.log(chalk.green(`✓ Default personality set to ${options.personality}`))
+  const newPet = options.pet || options.personality
+  if (newPet) {
+    saveConfig({ defaultPet: newPet, personality: newPet })
+    console.log(chalk.green(`✓ Default pet set to ${newPet}`))
     return
   }
 
   if (options.claude) {
     saveConfig({ claudeApiKey: options.claude })
-    console.log(chalk.green('✓ Claude API key saved — direct Claude integration enabled'))
+    console.log(chalk.green('✓ Claude API key saved — direct Anthropic integration enabled'))
+    return
+  }
+
+  if (options.openai) {
+    saveConfig({ openAiKey: options.openai })
+    console.log(chalk.green('✓ OpenAI API key saved — Codex/ChatGPT integration enabled'))
     return
   }
 
@@ -50,6 +62,7 @@ export async function configCommand(options: {
   console.log(chalk.magenta('\n🐱 Meowdel Setup\n'))
   console.log(chalk.gray('Configure your Meowdel CLI. Press Enter to keep current values.\n'))
 
+  const petChoices = KNOWN_PETS
   const answers = await inquirer.prompt([
     {
       type: 'input',
@@ -60,22 +73,30 @@ export async function configCommand(options: {
     {
       type: 'input',
       name: 'claudeApiKey',
-      message: 'Claude API key (optional, for direct AI access):',
+      message: 'Claude API key (optional, Anthropic direct access):',
       default: config.claudeApiKey || '',
     },
     {
+      type: 'input',
+      name: 'openAiKey',
+      message: 'OpenAI API key (optional, Codex/ChatGPT direct access):',
+      default: config.openAiKey || '',
+    },
+    {
       type: 'list',
-      name: 'personality',
-      message: 'Default personality:',
-      choices: ['mittens', 'luna', 'bandit', 'bella', 'blubie', 'professor', 'ninja', 'kiki'],
-      default: config.personality,
+      name: 'defaultPet',
+      message: 'Default pet:',
+      choices: petChoices,
+      default: config.defaultPet || config.personality || 'meowdel',
     },
   ])
 
   saveConfig({
     apiKey: answers.apiKey || undefined,
     claudeApiKey: answers.claudeApiKey || undefined,
-    personality: answers.personality,
+    openAiKey: answers.openAiKey || undefined,
+    defaultPet: answers.defaultPet,
+    personality: answers.defaultPet,
   })
 
   console.log(chalk.green('\n✓ Configuration saved!'))
